@@ -1,0 +1,5 @@
+{
+  "name": "CodeTree Extractor",
+  "description": "Genereer een directory tree en extraheer alle code uit een map naar één enkel document.",
+  "requestFramePermissions": []
+}
