@@ -1,1 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Oswald:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-h: "Oswald", sans-serif;
+  --font-sub: "Roboto", sans-serif;
+  --font-body: "Lato", sans-serif;
+  
+  --color-bg-dark: #121212;
+  --color-bg-panel: #1e1e1e;
+  --color-bg-light: #f4f4f4;
+  --color-accent: #ff0000;
+  --color-accent-dark: #cc0000;
+  --color-text-white: #e0e0e0;
+  --color-text-muted: #a0a0a0;
+  --color-text-dark: #222222;
+}
+
+@layer base {
+  body {
+    @apply bg-bg-dark text-text-white font-body;
+  }
+  
+  h1, h2, h3 {
+    @apply font-h uppercase tracking-wider;
+  }
+}

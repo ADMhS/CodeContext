@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { FolderOpen, Download, FileText, TreePine, Loader2, CheckCircle2 } from 'lucide-react';
+import { FolderOpen, Download, FileText, TreePine, Loader2, CheckCircle2, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface FileInfo {
@@ -18,6 +18,8 @@ export default function App() {
   const [treeString, setTreeString] = useState<string>('');
   const [combinedContent, setCombinedContent] = useState<string>('');
   const [fileCount, setFileCount] = useState(0);
+  const [folderName, setFolderName] = useState<string>('');
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFolderSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,6 +29,11 @@ export default function App() {
     setIsProcessing(true);
     setTreeString('');
     setCombinedContent('');
+    
+    // Get the root folder name
+    const firstFile = files[0];
+    const rootFolder = (firstFile as any).webkitRelativePath?.split('/')[0] || 'project';
+    setFolderName(rootFolder);
 
     try {
       const fileList = Array.from(files) as File[];
@@ -36,7 +43,7 @@ export default function App() {
       setTreeString(tree);
 
       // 2. Extract Content
-      const allowedExtensions = ['.css', '.php', '.js', '.htaccess', '.html', '.ts', '.tsx', '.json'];
+      const allowedExtensions = ['.css', '.php', '.js', '.htaccess', '.html', '.ts', '.tsx', '.json', '.txt', '.py', '.sql'];
       const extractedFiles: FileInfo[] = [];
 
       for (const file of fileList) {
@@ -45,7 +52,6 @@ export default function App() {
         
         if (isAllowed) {
           const content = await readFileContent(file);
-          // webkitRelativePath gives the path within the selected folder
           extractedFiles.push({
             path: (file as any).webkitRelativePath || file.name,
             content,
@@ -63,7 +69,7 @@ export default function App() {
         finalDoc += file.content;
         
         if (index < extractedFiles.length - 1) {
-          finalDoc += '\n'.repeat(11); // 10 empty lines + 1 for the next line
+          finalDoc += '\n'.repeat(11);
         }
       });
 
@@ -110,7 +116,6 @@ export default function App() {
       return result;
     };
 
-    // The first key is usually the folder name itself
     const rootKey = Object.keys(root)[0];
     if (!rootKey) return '';
     
@@ -128,46 +133,56 @@ export default function App() {
 
   const downloadFile = () => {
     if (!combinedContent) return;
-    
     const blob = new Blob([combinedContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'project_export.txt';
+    const safeFolderName = folderName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    a.download = `project_export_${safeFolderName}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="min-h-screen bg-[#F5F5F0] text-[#141414] font-sans p-6 md:p-12">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-12">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl font-serif italic mb-4"
-          >
-            Code Tree & Extractor
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-lg opacity-60 max-w-2xl"
-          >
-            Selecteer een map om een visuele directory tree te genereren en alle broncode te extraheren naar één overzichtelijk document.
-          </motion.p>
-        </header>
+  const copyToClipboard = () => {
+    if (!combinedContent) return;
+    navigator.clipboard.writeText(combinedContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-        <main className="space-y-8">
-          <section className="bg-white rounded-3xl p-8 shadow-sm border border-black/5">
-            <div className="flex flex-col items-center justify-center border-2 border-dashed border-black/10 rounded-2xl p-12 transition-colors hover:border-black/20">
-              <FolderOpen className="w-12 h-12 mb-4 opacity-20" />
-              <p className="text-center mb-6 opacity-60">
-                Klik op de knop hieronder om een map te kiezen.<br/>
-                Alle submappen en bestanden worden automatisch verwerkt.
+  return (
+    <div className="min-h-screen bg-bg-dark text-text-white font-body selection:bg-accent selection:text-white">
+      {/* Header Section */}
+      <section className="relative py-20 px-6 border-b border-white/5 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://red-g.pro/assets/img/BG-rGpv2.png')] bg-center bg-cover opacity-30 pointer-events-none" />
+        <div className="relative z-10 max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <span className="font-sub text-accent text-xs tracking-[3px] uppercase block">Productie Tool</span>
+            <h1 className="text-4xl md:text-6xl font-h leading-tight">
+              CodeTree Extractor<br />
+              <span className="text-text-muted font-light">voor AI Context</span>
+            </h1>
+            <p className="text-text-muted max-w-2xl text-lg leading-relaxed">
+              Genereer een visuele directory tree en extraheer alle broncode uit een map naar één enkel document. Ideaal om je volledige projectstructuur en code mee te geven aan AI assistenten.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      <main className="max-w-5xl mx-auto py-16 px-6 space-y-12">
+        {/* Selection Card */}
+        <section className="bg-bg-panel border-l-4 border-accent p-8 md:p-12">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-h">Selecteer je projectmap</h2>
+              <p className="text-text-muted">
+                Kies de hoofdmap van je project. De tool zal automatisch alle submappen scannen en relevante bestanden (.php, .js, .css, .htaccess, etc.) extraheren.
               </p>
               
               <input
@@ -175,81 +190,130 @@ export default function App() {
                 ref={fileInputRef}
                 onChange={handleFolderSelect}
                 className="hidden"
-                // @ts-ignore - webkitdirectory is a non-standard attribute but widely supported
+                // @ts-ignore
                 webkitdirectory=""
                 directory=""
                 multiple
               />
               
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isProcessing}
-                className="bg-[#141414] text-white px-8 py-4 rounded-full font-medium flex items-center gap-2 hover:bg-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Verwerken...
-                  </>
-                ) : (
-                  <>
-                    <FolderOpen className="w-5 h-5" />
-                    Kies Map
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing}
+                  className="bg-accent hover:bg-accent-dark text-white px-8 py-4 font-sub text-sm uppercase tracking-[1.5px] transition-all active:scale-95 disabled:opacity-50 flex items-center gap-3"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Verwerken...
+                    </>
+                  ) : (
+                    <>
+                      <FolderOpen className="w-5 h-5" />
+                      Kies Map
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </section>
+            
+            <div className="hidden md:block">
+              <div className="border border-white/10 p-6 bg-black/20 font-mono text-[10px] text-text-muted/50 overflow-hidden select-none">
+                <div className="opacity-40">
+                  red-G-pro/<br />
+                  ├── .htaccess<br />
+                  ├── index.php<br />
+                  ├── assets/<br />
+                  │   ├── css/<br />
+                  │   │   └── style.css<br />
+                  │   └── img/<br />
+                  └── includes/<br />
+                      ├── header.php<br />
+                      └── footer.php
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          <AnimatePresence>
-            {treeString && (
-              <motion.section
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
-              >
-                <div className="bg-white rounded-3xl p-8 shadow-sm border border-black/5 flex flex-col">
-                  <div className="flex items-center gap-2 mb-4 opacity-40 uppercase text-xs font-bold tracking-widest">
-                    <TreePine className="w-4 h-4" />
-                    Directory Tree
+        {/* Results Section */}
+        <AnimatePresence>
+          {treeString && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-8"
+            >
+              <div className="grid md:grid-cols-3 gap-8">
+                {/* Tree View */}
+                <div className="md:col-span-2 bg-bg-panel border-l-4 border-accent p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3 text-accent font-sub text-xs uppercase tracking-[2px]">
+                      <TreePine className="w-4 h-4" />
+                      Directory Tree
+                    </div>
                   </div>
-                  <pre className="bg-[#F9F9F7] p-4 rounded-xl font-mono text-xs overflow-auto max-h-[400px] flex-grow whitespace-pre">
+                  <pre className="bg-black/40 p-6 font-mono text-xs text-text-white overflow-auto max-h-[500px] border border-white/5">
                     {treeString}
                   </pre>
                 </div>
 
-                <div className="bg-white rounded-3xl p-8 shadow-sm border border-black/5 flex flex-col">
-                  <div className="flex items-center gap-2 mb-4 opacity-40 uppercase text-xs font-bold tracking-widest">
+                {/* Status & Actions */}
+                <div className="bg-bg-panel border-l-4 border-accent p-8 flex flex-col">
+                  <div className="flex items-center gap-3 text-accent font-sub text-xs uppercase tracking-[2px] mb-8">
                     <FileText className="w-4 h-4" />
-                    Extractie Status
+                    Status
                   </div>
-                  <div className="flex-grow flex flex-col justify-center items-center text-center p-6">
-                    <div className="bg-emerald-50 text-emerald-600 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                      <CheckCircle2 className="w-8 h-8" />
+                  
+                  <div className="flex-grow flex flex-col justify-center">
+                    <div className="text-accent mb-4">
+                      <CheckCircle2 className="w-12 h-12" />
                     </div>
-                    <h3 className="text-2xl font-medium mb-2">{fileCount} Bestanden</h3>
-                    <p className="opacity-60 mb-8">
-                      Alle .css, .php, .js en .htaccess bestanden zijn succesvol geëxtraheerd en samengevoegd.
+                    <h3 className="text-3xl font-h mb-2">{fileCount} Bestanden</h3>
+                    <p className="text-text-muted text-sm mb-8">
+                      Alle code is succesvol samengevoegd met pad-vermeldingen en scheidingslijnen.
                     </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={copyToClipboard}
+                      className="w-full border border-white/20 hover:bg-white hover:text-bg-dark text-white px-6 py-4 font-sub text-xs uppercase tracking-[1.5px] transition-all flex items-center justify-center gap-2"
+                    >
+                      {copied ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          Gekopieerd!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Kopieer Code
+                        </>
+                      )}
+                    </button>
                     <button
                       onClick={downloadFile}
-                      className="w-full border border-black/10 px-8 py-4 rounded-full font-medium flex items-center justify-center gap-2 hover:bg-black hover:text-white transition-all active:scale-95"
+                      className="w-full bg-accent hover:bg-accent-dark text-white px-6 py-4 font-sub text-xs uppercase tracking-[1.5px] transition-all flex items-center justify-center gap-2"
                     >
-                      <Download className="w-5 h-5" />
-                      Download Document
+                      <Download className="w-4 h-4" />
+                      Download .txt
                     </button>
                   </div>
                 </div>
-              </motion.section>
-            )}
-          </AnimatePresence>
-        </main>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
 
-        <footer className="mt-24 pt-8 border-t border-black/5 text-center opacity-30 text-sm">
-          <p>&copy; {new Date().getFullYear()} Code Tree & Extractor Tool</p>
-        </footer>
-      </div>
+      <footer className="py-12 border-t border-white/5 text-center">
+        <div className="container opacity-40">
+          <img src="https://red-g.pro/assets/img/logo_naam_rGp.png" alt="red-G Productie" className="h-8 mx-auto mb-4 grayscale" />
+          <p className="text-xs font-sub uppercase tracking-[2px]">&copy; {new Date().getFullYear()} red-G Productie &mdash; David Auwerx</p>
+        </div>
+      </footer>
     </div>
   );
 }

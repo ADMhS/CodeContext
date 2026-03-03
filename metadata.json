@@ -1,5 +1,5 @@
 {
-  "name": "CodeTree Extractor",
+  "name": "CodeTree Extractor for AI context",
   "description": "Genereer een directory tree en extraheer alle code uit een map naar één enkel document.",
   "requestFramePermissions": []
 }
